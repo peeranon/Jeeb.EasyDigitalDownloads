@@ -1,26 +1,10 @@
 <?php
-/*
-Plugin Name: 		Jeeb Easy Digital Downloads (EDD) - Bitcoin Payment Gateway
-Plugin URI: 		https://github.com/gdhar67/Jeeb.EasyDigitalDownloads
-Description:		Provides a <a href="https://jeeb.io">Jeeb.io</a> Bitcoin Payment Gateway for <a href="https://wordpress.org/plugins/easy-digital-downloads/">Easy Digital Downloads 2.4.2+</a>. Direct Integration on your website, no external payment pages opens (as other payment gateways offer). Accept Crypto payments online. You will see the bitcoin payment statistics in one common table on your website. No Chargebacks, Global, Secure. All in automatic mode.
-Version: 			1.0.0
-Author: 			Jeeb.io
-Author URI: 		https://jeeb.io
-License: 			GPLv2
-License URI: 		http://www.gnu.org/licenses/gpl-2.0.html
-GitHub Plugin URI: 	https://github.com/gdhar67/Jeeb.EasyDigitalDownloads
-*/
 
 // Exit if accessed directly
 if( !defined( 'ABSPATH' ) ) exit;
-
-
 if( !class_exists( 'EDD_Jeeb' ) ) {
-
     class EDD_Jeeb {
-
         private static $instance;
-
         /**
          * Get active instance
          *
@@ -32,11 +16,8 @@ if( !class_exists( 'EDD_Jeeb' ) ) {
         public static function get_instance() {
             if( !self::$instance )
                 self::$instance = new EDD_Jeeb();
-
             return self::$instance;
         }
-
-
         /**
          * Class constructor
          *
@@ -47,14 +28,10 @@ if( !class_exists( 'EDD_Jeeb' ) ) {
         public function __construct() {
             // Plugin dir
             define( 'EDD_JEEB_DIR', plugin_dir_path( __FILE__ ) );
-
             // Plugin URL
             define( 'EDD_JEEB_URL', plugin_dir_url( __FILE__ ) );
-
             $this->init();
         }
-
-
         /**
          * Run action and filter hooks
          *
@@ -65,31 +42,22 @@ if( !class_exists( 'EDD_Jeeb' ) ) {
         private function init() {
             // Make sure EDD is active
             if( !class_exists( 'Easy_Digital_Downloads' ) ) return;
-
             global $edd_options;
-
             // Internationalization
             add_action( 'init', array( $this, 'textdomain' ) );
-
             // Register settings
             add_filter( 'edd_settings_gateways', array( $this, 'settings' ), 1 );
-
             // Add the gateway
             add_filter( 'edd_payment_gateways', array( $this, 'register_gateway' ) );
-
             // Remove CC form
             add_action( 'edd_jeeb_cc_form', '__return_false' );
-
             // Process payment
             add_action( 'edd_gateway_jeeb', array( $this, 'process_payment' ) );
             add_action( 'init', array( $this, 'edd_listen_for_jeeb_ipn' ) );
             add_action( 'edd_verify_jeeb_ipn', array( $this, 'edd_process_jeeb_ipn' ) );
-
             // Display errors
             add_action( 'edd_after_cc_fields', array( $this, 'errors_div' ), 999 );
         }
-
-
         /**
          * Internationalization
          *
@@ -102,12 +70,9 @@ if( !class_exists( 'EDD_Jeeb' ) ) {
             // Set filter for language directory
             $lang_dir = dirname( plugin_basename( __FILE__ ) ) . '/languages/';
             $lang_dir = apply_filters( 'edd_jeeb_lang_dir', $lang_dir );
-
             // Load translations
             load_plugin_textdomain( 'edd-jeeb', false, $lang_dir );
         }
-
-
         /**
          * Add settings
          *
@@ -147,6 +112,7 @@ if( !class_exists( 'EDD_Jeeb' ) ) {
                       'btc' => 'BTC',
                       'eur' => 'EUR',
                       'irr' => 'IRR',
+                      'toman'=>'TOMAN',
                       'usd' => 'USD',
                      ),
                 ),
@@ -213,11 +179,8 @@ if( !class_exists( 'EDD_Jeeb' ) ) {
                     'faux'  => true
                 )
             );
-
             return array_merge( $settings, $jeeb_settings );
         }
-
-
         /**
          * Register our new gateway
          *
@@ -231,11 +194,8 @@ if( !class_exists( 'EDD_Jeeb' ) ) {
                 'admin_label'       => 'Jeeb Payments',
                 'checkout_label'    => __( 'Jeeb Payments - Pay with Bitcoin, Litecoin, or other cryptocurrencies', 'edd-jeeb-gateway' )
             );
-
             return $gateways;
         }
-
-
         /**
          * Process payment submission
          *
@@ -247,7 +207,6 @@ if( !class_exists( 'EDD_Jeeb' ) ) {
          */
         public function process_payment( $purchase_data ) {
             global $edd_options;
-
             // Collect payment data
             $payment_data = array(
                 'price'         => $purchase_data['price'],
@@ -261,10 +220,8 @@ if( !class_exists( 'EDD_Jeeb' ) ) {
                 'gateway'       => 'jeeb',
                 'status'        => 'pending'
             );
-
             // Record the pending payment
             $payment = edd_insert_payment( $payment_data );
-
             // Were there any errors?
             if( !$payment ) {
                 // Record the error
@@ -287,14 +244,15 @@ if( !class_exists( 'EDD_Jeeb' ) ) {
                                 'eth',
                                 'test-btc'
                                );
-
                 foreach ($params as $p) {
                   // error_log($p." = ". $edd_options["edd_jeeb_".$p]);
                   $edd_options["edd_jeeb_".$p] == 1 ? $target_cur .= $p . "/" : $target_cur .="" ;
                 }
-
+                if($baseCur=='toman'){
+                  $baseCur='irr';
+                  $order_total *= 10;
+                }
                 $amount = convertBaseToTarget($baseUri, $order_total, $signature, $baseCur);
-
                 // Setup Jeeb arguments
                 $data = array(
                   "orderNo"      => $payment,
@@ -307,22 +265,13 @@ if( !class_exists( 'EDD_Jeeb' ) ) {
                   "language"     => $edd_options['edd_jeeb_lang'] == 'none' ? NULL : $edd_options['edd_jeeb_lang']
                 );
                 $data_string = json_encode($data);
-
             }
-
             error_log("target".$target_cur." Total =".$order_total."Requesting with Params => " . json_encode($data));
-
             $token = createInvoice($baseUri, $amount, $data, $signature);
-
             // Redirect to Jeeb
             redirectPayment($baseUri, $token);
-
             exit;
         }
-
-
-
-
         /**
          * Listens for a Jeeb IPN requests and then sends to the processing function
          *
@@ -333,14 +282,10 @@ if( !class_exists( 'EDD_Jeeb' ) ) {
          */
         public function edd_listen_for_jeeb_ipn() {
             global $edd_options;
-
             if ( isset( $_GET['edd-listener'] ) && $_GET['edd-listener'] == 'JEEBIPN' ) {
                 do_action( 'edd_verify_jeeb_ipn' );
             }
         }
-
-
-
         /**
          * Process Jeeb IPN
          *
@@ -351,23 +296,18 @@ if( !class_exists( 'EDD_Jeeb' ) ) {
          */
         public function edd_process_jeeb_ipn() {
             global $edd_options;
-
             $postdata = file_get_contents("php://input");
             $json = json_decode($postdata, true);
-
             $payment_id     = $json['orderNo'];
-
             if($json['signature'] == $edd_options['edd_jeeb_signature']){
               error_log("Entered into Notification");
               error_log("Response =>". var_export($json, TRUE));
-
             // Call Jeeb
             $network_uri = "https://core.jeeb.io/api/";
             if ( $json['stateId']== 2 ) {
               $status_text = "created";
               $int     = edd_insert_payment_note( $payment_id, sprintf( __( 'Invoice %s, Awaiting payment', 'edd-jeeb' ), $status_text) );
               $result1 = edd_update_payment_status( $payment_id, 'pending' );
-
             }
             else if ( $json['stateId']== 3 ) {
               $status_text = "paid";
@@ -375,19 +315,15 @@ if( !class_exists( 'EDD_Jeeb' ) ) {
               $result1 = edd_update_payment_status( $payment_id, 'pending' );
               // Get rid of cart contents
               edd_empty_cart();
-
             }
             else if ( $json['stateId']== 4 ) {
-
               $data = array(
                 "token" => $json["token"]
               );
-
               $data_string = json_encode($data);
               $api_key = $json["signature"];
               $url = $network_uri.'payments/' . $api_key . '/confirm';
               error_log("Signature:".$api_key." Base-Url:".$network_uri." Url:".$url);
-
               $ch = curl_init($url);
               curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
               curl_setopt($ch, CURLOPT_POSTFIELDS, $data_string);
@@ -396,18 +332,14 @@ if( !class_exists( 'EDD_Jeeb' ) ) {
                   'Content-Type: application/json',
                   'Content-Length: ' . strlen($data_string))
               );
-
               $result = curl_exec($ch);
               $data = json_decode( $result , true);
               error_log("data = ".var_export($data, TRUE));
-
-
               if($data['result']['isConfirmed']){
                 error_log('Payment confirmed by jeeb');
                 $status_text = "confirmed";
                 $int     = edd_insert_payment_note( $payment_id, sprintf( __( 'Payment was successfully %s', 'edd-jeeb' ) , $status_text ) );
                 $result1 = edd_update_payment_status( $payment_id, 'publish' );
-
               }
               else {
                 error_log('Payment rejected by jeeb');
@@ -417,29 +349,24 @@ if( !class_exists( 'EDD_Jeeb' ) ) {
               $status_text = "expired";
               $int     = edd_insert_payment_note( $payment_id, sprintf( __( 'Jeeb Invoice %s', 'edd-jeeb' ), $status_text ));
               $result1 = edd_update_payment_status( $payment_id, 'failed' );
-
             }
             else if ( $json['stateId']== 6 ) {
               $status_text = "overpaid";
               $int     = edd_insert_payment_note( $payment_id, sprintf( __( 'Jeeb Invoice %s', 'edd-jeeb' ), $status_text ));
               $result1 = edd_update_payment_status( $payment_id, 'failed' );
-
             }
             else if ( $json['stateId']== 7 ) {
               $status_text = "partially paid";
               $int     = edd_insert_payment_note( $payment_id, sprintf( __( 'Jeeb Invoice %s', 'edd-jeeb' ), $status_text ));
               $result1 = edd_update_payment_status( $payment_id, 'failed' );
-
             }
             else{
               error_log('Cannot read state id sent by Jeeb');
             }
           }
-
             die( __('IPN Processed OK', 'edd-jeeb' ) );
         }
     }
-
     function convertBaseToTarget($url, $amount, $signature, $baseCur) {
         error_log("Entered into Convert Base To Target");
         error_log($url.'currency?'.$signature.'&value='.$amount.'&base='.$baseCur.'&target=btc');
@@ -449,20 +376,15 @@ if( !class_exists( 'EDD_Jeeb' ) ) {
         curl_setopt($ch, CURLOPT_HTTPHEADER, array(
           'Content-Type: application/json')
       );
-
       $result = curl_exec($ch);
       $data = json_decode( $result , true);
       error_log('Response =>'. var_export($data, TRUE));
       // Return the equivalent bitcoin value acquired from Jeeb server.
       return (float) $data["result"];
-
       }
-
-
       function createInvoice($url, $amount, $options = array(), $signature) {
           error_log("Entered into Create Invoice");
           $post = json_encode($options);
-
           $ch = curl_init($url.'payments/' . $signature . '/issue/');
           curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
           curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
@@ -471,15 +393,11 @@ if( !class_exists( 'EDD_Jeeb' ) ) {
               'Content-Type: application/json',
               'Content-Length: ' . strlen($post))
           );
-
           $result = curl_exec($ch);
           $data = json_decode( $result , true);
           error_log('Response =>'. var_export($data, TRUE));
-
           return $data['result']['token'];
-
       }
-
       function redirectPayment($url, $token) {
         error_log("Entered into auto submit-form");
         // Using Auto-submit form to redirect user with the token
@@ -490,10 +408,7 @@ if( !class_exists( 'EDD_Jeeb' ) ) {
                     "document.getElementById('form').submit();".
                "</script>";
       }
-
 }
-
-
 function edd_jeeb_gateway_load() {
     $edd_jeeb = new EDD_Jeeb();
 }
