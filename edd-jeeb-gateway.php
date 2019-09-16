@@ -4,8 +4,8 @@
  * Plugin URI:      https://github.com/Jeebio/Jeeb.EasyDigitalDownloads
  * Description:     Add support for Jeeb payment Gateway to Easy Digital Downloads.
  * Version:         3.0
- * Author:          Giridhar
- * Author URI:      https://github.com/gdhar67
+ * Author:          Jeeb
+ * Author URI:      https://jeeb.io
  */
 
 // Exit if accessed directly
