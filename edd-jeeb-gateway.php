@@ -34,7 +34,7 @@ function jeeb_payment_gateway_plugin_setup()
     global $wpdb;
     $errors = array();
 
-    if (!BPC_EDD_isCurl()) {
+    if (!EDD_Jeeb_checkCurl()) {
         $errors[] = 'cUrl needs to be installed/enabled for Jeeb plugin for Easy Digital Downloads to function';
     }
 
@@ -425,7 +425,7 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
 
             $token = $this->create_payment($signature, $data);
 
-            edd_empty_cart();
+            // edd_empty_cart(); TODO: fix this issue
 
             $this->redirect_payment($token);
         }
