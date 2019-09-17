@@ -35,7 +35,7 @@ function jeeb_payment_gateway_plugin_setup()
     $errors = array();
 
     if (!BPC_EDD_isCurl()) {
-        $errors[] = 'cUrl needs to be installed/enabled for BitPay Checkout for Easy Digital Downloads to function';
+        $errors[] = 'cUrl needs to be installed/enabled for Jeeb plugin for Easy Digital Downloads to function';
     }
 
     if (empty($errors) == false) {
@@ -425,6 +425,8 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
 
             $token = $this->create_payment($signature, $data);
 
+            edd_empty_cart();
+
             $this->redirect_payment($token);
         }
 
@@ -465,7 +467,7 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
                 } else if ($json['stateId'] == 3) {
                     $int = edd_insert_payment_note($payment_id, 'Jeeb: Pending confirmation.');
                     $result = edd_update_payment_status($payment_id, 'pending');
-                    edd_empty_cart();
+                    edd_set_payment_transaction_id( $payment_id, $json['referenceNo'] );
                 } else if ($json['stateId'] == 4) {
                     $data = array(
                         "token" => $json["token"],
