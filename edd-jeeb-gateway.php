@@ -3,7 +3,7 @@
  * Plugin Name:     Easy Digital Downloads - Jeeb Payment Gateway
  * Plugin URI:      https://github.com/Jeebio/Jeeb.EasyDigitalDownloads
  * Description:     The first Iranian platform for accepting and processing cryptocurrencies payments.
- * Version:         3.0
+ * Version:         3.2
  * Author:          Jeeb
  * Author URI:      https://jeeb.io
  */
@@ -51,7 +51,7 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
     {
 
         const PLUGIN_NAME = 'easydigitaldownloads';
-        const PLUGIN_VERSION = '3.0';
+        const PLUGIN_VERSION = '3.2';
         const BASE_URL = "https://core.jeeb.io/api/";
 
         private static $instance;
@@ -179,10 +179,17 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
                     'type' => 'select',
                     'options' => array(
                         'btc' => 'BTC (Bitcoin)',
-                        'usd' => 'USD (US Dollar)',
-                        'eur' => 'EUR (Euro)',
                         'irr' => 'IRR (Iranian Rial)',
                         'toman' => 'TOMAN (Iranian Toman)',
+                        'usd' => 'USD (US Dollar)',
+                        'eur' => 'EUR (Euro)',
+                        'gbp' => 'GBP (British Pound)',
+                        'cad' => 'CAD (Canadian Dollar)',
+                        'aud' => 'AUD (Australian Dollar)',
+                        'aed' => 'AED (Dirham)',
+                        'try' => 'TRY (Turkish Lira)',
+                        'cny' => 'CNY (Chinese Yuan)',
+                        'jpy' => 'JPY (Japanese Yen)'
                     ),
                 ),
 
@@ -190,6 +197,13 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
                     'id' => 'edd_jeeb_btc',
                     'name' => 'Payable Currencies',
                     'desc' => 'BTC (Bitcoin)',
+                    'type' => 'checkbox',
+                    'default' => 'yes',
+                ),
+
+                array(
+                    'id' => 'edd_jeeb_doge',
+                    'desc' => 'DOGE (Dogecoin)',
                     'type' => 'checkbox',
                     'default' => 'yes',
                 ),
@@ -232,6 +246,13 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
                 array(
                     'id' => 'edd_jeeb_tbtc',
                     'desc' => 'TBTC (Bitcoin TESTNET)',
+                    'type' => 'checkbox',
+                    'default' => 'no',
+                ),
+
+                array(
+                    'id' => 'edd_jeeb_tdoge',
+                    'desc' => 'TDOGE (Dogecoin TESTNET)',
                     'type' => 'checkbox',
                     'default' => 'no',
                 ),
@@ -391,12 +412,14 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
 
             $params = array(
                 'btc',
+                'doge',
                 'ltc',
                 'bch',
                 'eth',
                 'xrp',
                 'xmr',
                 'tbtc',
+                'tdoge',
                 'tltc',
             );
 
@@ -467,7 +490,7 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
                 } else if ($json['stateId'] == 3) {
                     $int = edd_insert_payment_note($payment_id, 'Jeeb: Pending confirmation.');
                     $result = edd_update_payment_status($payment_id, 'pending');
-                    edd_set_payment_transaction_id( $payment_id, $json['referenceNo'] );
+                    edd_set_payment_transaction_id($payment_id, $json['referenceNo']);
                 } else if ($json['stateId'] == 4) {
                     $data = array(
                         "token" => $json["token"],
@@ -476,8 +499,13 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
                     $is_confirmed = $this->confirm_payment($signature, $data);
 
                     if ($is_confirmed) {
-                        $int = edd_insert_payment_note($payment_id, 'Jeeb: Merchant confirmation obtained. Payment is completed.');
-                        $result = edd_update_payment_status($payment_id, 'complete');
+                        if ($json['value'] == $json['paidValue']) {
+                            $int = edd_insert_payment_note($payment_id, 'Jeeb: Merchant confirmation obtained. Payment is completed.');
+                            $result = edd_update_payment_status($payment_id, 'complete');
+                        } else {
+                            $int = edd_insert_payment_note($payment_id, 'Jeeb: Values don\'t match. Transaction should be refunded but auto-refund is disabled.');
+                            $result = edd_update_payment_status($payment_id, 'refunded');
+                        }
                     } else {
                         $int = edd_insert_payment_note($payment_id, 'Jeeb: Double spending avoided.');
                         $result = edd_update_payment_status($payment_id, 'failed');
