@@ -3,7 +3,7 @@
  * Plugin Name:     Easy Digital Downloads - Jeeb Payment Gateway
  * Plugin URI:      https://github.com/Jeebio/Jeeb.EasyDigitalDownloads
  * Description:     The first Iranian platform for accepting and processing cryptocurrencies payments.
- * Version:         3.2
+ * Version:         3.3
  * Author:          Jeeb
  * Author URI:      https://jeeb.io
  */
@@ -51,8 +51,8 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
     {
 
         const PLUGIN_NAME = 'easydigitaldownloads';
-        const PLUGIN_VERSION = '3.2';
-        const BASE_URL = "https://core.jeeb.io/api/";
+        const PLUGIN_VERSION = '3.4';
+        const BASE_URL = "https://core.jeeb.io/api/v3/";
 
         private static $instance;
         /**
@@ -145,6 +145,62 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
         }
 
         /**
+         * Get all available currencies in Jeeb gateway
+         *
+         * @since       3.4.0
+         * @access      private
+         * @return      array
+         */
+        private function jeeb_available_currencies_list()
+        {
+            $currencies = [
+                "IRT" => "IRT (Toman)",
+                "IRR" => "IRR (Rial)",
+                "BTC" => "BTC (Bitcoin)",
+                "USD" => "USD (US Dollar)",
+                "USDT" => "USDT (TetherUS)",
+                "EUR" => "EUR (Euro)",
+                "GBP" => "GBP (Pound)",
+                "CAD" => "CAD (CA Dollar)",
+                "AUD" => "AUD (AU Dollar)",
+                "JPY" => "JPY (Yen)",
+                "CNY" => "CNY (Yuan)",
+                "AED" => "AED (Dirham)",
+                "TRY" => "TRY (Lira)",
+            ];
+
+            return $currencies;
+        }
+
+        /**
+         * Get all available coins in Jeeb gateway
+         *
+         * @since       3.4.0
+         * @access      private
+         * @return      array
+         */
+        private function jeeb_available_coins_list()
+        {
+            $currencies = [
+                "BTC" => "BTC (Bitcoin)",
+                "ETH" => "ETH (Ethereum)",
+                "DOGE" => "DOGE (Dogecoin)",
+                "LTC" => "LTC (Litecoin)",
+                "USDT" => "USDT (TetherUS)",
+                "BNB" => "BNB (BNB)",
+                "USDC" => "USDC (USD Coin)",
+                "ZRX" => "ZRX (0x)",
+                "LINK" => "LINK (ChainLink)",
+                "PAX" => "PAX (Paxos Standard)",
+                "DAI" => "DAI (Dai)",
+                "TBTC" => "TBTC (Bitcoin Testnet)",
+                "TETH" => "TETH (Ethereum Testnet)",
+            ];
+
+            return $currencies;
+        }
+
+        /**
          * Add settings
          *
          * @since       1.0.0
@@ -166,104 +222,39 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
                 ),
 
                 array(
-                    'id' => 'edd_jeeb_signature',
-                    'name' => 'Signature',
-                    'desc' => '<br/>The signature provided by Jeeb for you merchant.',
+                    'id' => 'edd_jeeb_apiKey',
+                    'name' => 'API Key',
+                    'desc' => '<br/>The API key provided by Jeeb for you merchant.',
                     'type' => 'text',
                 ),
 
                 array(
-                    'id' => 'edd_jeeb_basecoin',
+                    'id' => 'edd_jeeb_baseCurrency',
                     'name' => 'Base Currency',
                     'desc' => 'The base currency of your website.',
                     'type' => 'select',
-                    'options' => array(
-                        'btc' => 'BTC (Bitcoin)',
-                        'irr' => 'IRR (Iranian Rial)',
-                        'toman' => 'TOMAN (Iranian Toman)',
-                        'usd' => 'USD (US Dollar)',
-                        'eur' => 'EUR (Euro)',
-                        'gbp' => 'GBP (British Pound)',
-                        'cad' => 'CAD (Canadian Dollar)',
-                        'aud' => 'AUD (Australian Dollar)',
-                        'aed' => 'AED (Dirham)',
-                        'try' => 'TRY (Turkish Lira)',
-                        'cny' => 'CNY (Chinese Yuan)',
-                        'jpy' => 'JPY (Japanese Yen)'
-                    ),
+                    'options' => $this->jeeb_available_currencies_list(),
                 ),
+            );
 
-                array(
-                    'id' => 'edd_jeeb_btc',
-                    'name' => 'Payable Currencies',
-                    'desc' => 'BTC (Bitcoin)',
+            $available_coins = $this->jeeb_available_coins_list();
+
+            $first_item = true;
+            foreach ($available_coins as $key => $title) {
+                $jeeb_edd_settings[] = array(
+                    'id' => 'edd_jeeb_' . $key,
+                    'name' => $first_item ? 'Payable Currencies':'',
+                    'desc' => $title,
                     'type' => 'checkbox',
                     'default' => 'yes',
-                ),
+                );
 
-                array(
-                    'id' => 'edd_jeeb_doge',
-                    'desc' => 'DOGE (Dogecoin)',
-                    'type' => 'checkbox',
-                    'default' => 'yes',
-                ),
+                if ($first_item) {
+                    $first_item = false;
+                }
+            }
 
-                array(
-                    'id' => 'edd_jeeb_ltc',
-                    'desc' => 'LTC (Litecoin)',
-                    'type' => 'checkbox',
-                    'default' => 'yes',
-                ),
-
-                array(
-                    'id' => 'edd_jeeb_bch',
-                    'desc' => 'BCH (Bitcoin Cash)',
-                    'type' => 'checkbox',
-                    'default' => 'no',
-                ),
-
-                array(
-                    'id' => 'edd_jeeb_eth',
-                    'desc' => 'ETH (Ethereum)',
-                    'type' => 'checkbox',
-                    'default' => 'no',
-                ),
-
-                array(
-                    'id' => 'edd_jeeb_xrp',
-                    'desc' => 'XRP (Ripple)',
-                    'type' => 'checkbox',
-                    'default' => 'no',
-                ),
-
-                array(
-                    'id' => 'edd_jeeb_xmr',
-                    'desc' => 'XMR (Monero)',
-                    'type' => 'checkbox',
-                    'default' => 'no',
-                ),
-
-                array(
-                    'id' => 'edd_jeeb_tbtc',
-                    'desc' => 'TBTC (Bitcoin TESTNET)',
-                    'type' => 'checkbox',
-                    'default' => 'no',
-                ),
-
-                array(
-                    'id' => 'edd_jeeb_tdoge',
-                    'desc' => 'TDOGE (Dogecoin TESTNET)',
-                    'type' => 'checkbox',
-                    'default' => 'no',
-                ),
-
-                array(
-                    'id' => 'edd_jeeb_tltc',
-                    'desc' => 'TLTC (Litecoin TESTNET)',
-                    'type' => 'checkbox',
-                    'default' => 'no',
-                ),
-
+            $jeeb_edd_settings = array_merge($jeeb_edd_settings, array(
                 array(
                     'id' => 'edd_jeeb_lang',
                     'name' => 'Language',
@@ -285,7 +276,7 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
                 ),
 
                 array(
-                    'id' => 'edd_jeeb_test',
+                    'id' => 'edd_jeeb_testnets',
                     'name' => 'Allow TestNets',
                     'desc' => 'Allows testnets such as TBTC to get processed.',
                     'type' => 'checkbox',
@@ -334,7 +325,20 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
                     'name' => 'Checkout Button',
                     'type' => 'text',
                 ),
-            );
+
+                array(
+                    'id'   => 'edd_jeeb_debugging_header',
+                    'name' => '<strong>Debugging</strong>',
+                    'type' => 'header',
+                ),
+
+                array(
+                    'id' => 'edd_jeeb_webhookDebugUrl',
+                    'name' => 'Webhook.site URL',
+                    'desc' => '<br/>With <a href="https://webhook.site">Webhook.site</a>, you instantly get a unique, random URL that you can use to test and debug Webhooks and HTTP requests',
+                    'type' => 'text',
+                ),
+            ));
             $jeeb_edd_settings = apply_filters('edd_bp_checkout_settings', $jeeb_edd_settings);
             $gateway_settings['jeeb_checkout_edd'] = $jeeb_edd_settings;
             return $gateway_settings;
@@ -381,8 +385,10 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
                 'gateway' => 'jeeb',
                 'status' => 'pending',
             );
+
             // Record the pending payment
             $payment = edd_insert_payment($payment_data);
+
             // Were there any errors?
             if (!$payment) {
                 // Record the error
@@ -393,15 +399,22 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
             }
         }
 
-        public function process_jeeb_payment($purchase_data, $payment)
+        public function process_jeeb_payment($purchase_data, $payment_id)
         {
             global $edd_options;
-            $signature = $edd_options['edd_jeeb_signature'];
-            $webhook_url = trailingslashit(home_url()) . '?edd-listener=JEEBIPN';
-            $callback_url = $edd_options['edd_jeeb_callback_url'];
+
+            $api_key = $edd_options['edd_jeeb_apiKey'];
+
+            $hash_key = md5($api_key . $payment_id);
+            $webhook_url = trailingslashit(home_url()) . '?edd-listener=JEEBIPN&hashKey=' . $hash_key;
+
+            $callback_url = get_permalink( edd_get_option( 'success_page', false ) );
+            if (isset($edd_options['edd_jeeb_callback_url'])) {
+                $callback_url =  $edd_options['edd_jeeb_callback_url'];
+            }
+
             $order_total = round($purchase_data['price'] - $purchase_data['tax'], 8);
-            $base_currency = $edd_options['edd_jeeb_basecoin'];
-            $target_cur = "";
+            $base_currency = $edd_options['edd_jeeb_baseCurrency'];
 
             if (isset($edd_options['edd_jeeb_expiration']) === false ||
                 is_numeric($edd_options['edd_jeeb_expiration']) === false ||
@@ -410,43 +423,33 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
                 $edd_options['edd_jeeb_expiration'] = 15;
             }
 
-            $params = array(
-                'btc',
-                'doge',
-                'ltc',
-                'bch',
-                'eth',
-                'xrp',
-                'xmr',
-                'tbtc',
-                'tdoge',
-                'tltc',
-            );
+            $coins = array_keys($this->jeeb_available_coins_list());
 
-            foreach ($params as $p) {
-                isset($edd_options["edd_jeeb_" . $p]) ? $target_cur .= $p . "/" : $target_cur .= "";
+            $payable_coins = [];
+            foreach ($coins as $coin) {
+                if (isset($edd_options["edd_jeeb_" . $coin])) {
+                    $payable_coins[] = $coin;
+                }
             }
-
-            if ($base_currency == 'toman') {
-                $base_currency = 'irr';
-                $order_total *= 10;
+            $payable_coins = implode('/', $payable_coins);
+            if (empty($payable_coins)) {
+                $payable_coins = null;
             }
-
-            $amount = $this->convert_base_to_bitcoin($base_currency, $order_total);
 
             $data = array(
-                "orderNo" => $payment,
-                "value" => $amount,
-                "coins" => $target_cur,
+                "orderNo" => $payment_id,
+                "baseAmount" => $order_total,
+                "baseCurrencyId" => $base_currency,
+                "payableCoins" => $payable_coins,
                 "webhookUrl" => $webhook_url,
                 "callbackUrl" => $callback_url,
                 "expiration" => $edd_options['edd_jeeb_expiration'],
                 "allowReject" => $edd_options['edd_jeeb_allow_refund'] == '1' ? true : false,
-                "allowTestNet" => $edd_options['edd_jeeb_test'] == '1' ? true : false,
+                "allowTestNets" => $edd_options['edd_jeeb_testnets'] == '1' ? true : false,
                 "language" => $edd_options['edd_jeeb_lang'] == 'none' ? null : $edd_options['edd_jeeb_lang'],
             );
 
-            $token = $this->create_payment($signature, $data);
+            $token = $this->create_payment($api_key, $data);
 
             // edd_empty_cart(); TODO: fix this issue
 
@@ -479,78 +482,78 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
         public function process_webhook()
         {
             global $edd_options;
+
             $postdata = file_get_contents("php://input");
             $json = json_decode($postdata, true);
+
+            $this->notify_log($json);
+
             $payment_id = $json['orderNo'];
-            $signature = $edd_options['edd_jeeb_signature'];
-            if ($json['signature'] == $signature) {
-                if ($json['stateId'] == 2) {
-                    $int = edd_insert_payment_note($payment_id, 'Jeeb: Pending transaction.');
-                    $result = edd_update_payment_status($payment_id, 'pending');
-                } else if ($json['stateId'] == 3) {
-                    $int = edd_insert_payment_note($payment_id, 'Jeeb: Pending confirmation.');
-                    $result = edd_update_payment_status($payment_id, 'pending');
-                    edd_set_payment_transaction_id($payment_id, $json['referenceNo']);
-                } else if ($json['stateId'] == 4) {
-                    $data = array(
-                        "token" => $json["token"],
-                    );
 
-                    $is_confirmed = $this->confirm_payment($signature, $data);
+            $api_key = $edd_options['edd_jeeb_apiKey'];
 
-                    if ($is_confirmed) {
-                        if ($json['value'] == $json['paidValue']) {
-                            $int = edd_insert_payment_note($payment_id, 'Jeeb: Merchant confirmation obtained. Payment is completed.');
-                            $result = edd_update_payment_status($payment_id, 'complete');
-                        } else {
-                            $int = edd_insert_payment_note($payment_id, 'Jeeb: Values don\'t match. Transaction should be refunded but auto-refund is disabled.');
-                            $result = edd_update_payment_status($payment_id, 'refunded');
+            if ( $this->validate_hashkey($_GET['hashKey'], $api_key, $payment_id) ) {
+                
+                $this->notify_log('HashKey:' . $_GET['hashKey'] . ' is valid');
+
+                switch ($json['state']) {
+                    case 'PendingTransaction':
+                        edd_insert_payment_note($payment_id, 'Jeeb: Pending transaction.');
+                        edd_update_payment_status($payment_id, 'pending');
+                        break;
+
+                    case 'PendingConfirmation':
+                        edd_insert_payment_note($payment_id, 'Jeeb: Pending confirmation.');
+                        if ($json['refund'] == true) {
+                            edd_insert_payment_note($payment_id, 'Jeeb: Payment will be rejected.');
                         }
-                    } else {
-                        $int = edd_insert_payment_note($payment_id, 'Jeeb: Double spending avoided.');
-                        $result = edd_update_payment_status($payment_id, 'failed');
-                    }
-                } else if ($json['stateId'] == 5) {
-                    $int = edd_insert_payment_note($payment_id, 'Jeeb: Payment is expired or canceled.');
-                    $result = edd_update_payment_status($payment_id, 'failed');
-                } else if ($json['stateId'] == 6) {
-                    $int = edd_insert_payment_note($payment_id, 'Jeeb: Partial-paid payment occurred, transaction was refunded automatically.');
-                    $result = edd_update_payment_status($payment_id, 'refunded');
-                } else if ($json['stateId'] == 7) {
-                    $int = edd_insert_payment_note($payment_id, 'Jeeb: Overpaid payment occurred, transaction was refunded automatically.');
-                    $result = edd_update_payment_status($payment_id, 'refunded');
-                } else {
-                    $result = edd_insert_payment_note($payment_id, 'Jeeb: Unknown state received. Please report this incident.');
+                        edd_update_payment_status($payment_id, 'pending');
+                        edd_set_payment_transaction_id($payment_id, $json['referenceNo']);
+                        break;
+                    
+                    case 'Completed':
+                        $is_confirmed = $this->confirm_payment($json['token'], $api_key);
+
+                        if ($is_confirmed) {
+                            edd_insert_payment_note($payment_id, 'Jeeb: Payment is confirmed.');
+                            edd_update_payment_status($payment_id, 'complete');
+                        } else {
+                            edd_insert_payment_note($payment_id, 'Jeeb: Double spending avoided.');
+                        }
+                        break;
+                    
+                    case 'Rejected':
+                        edd_insert_payment_note($payment_id, 'Jeeb: Payment is rejected.');
+                        edd_update_payment_status($payment_id, 'refunded');
+                        break;
+
+                    case 'Expired':
+                        edd_insert_payment_note($payment_id, 'Jeeb: Payment is expired or canceled.');
+                        edd_update_payment_status($payment_id, 'failed');
+
+                        $this->notify_log('Payment is expired or canceled');
+                        break;
+
+                    default:
+                        edd_insert_payment_note($payment_id, 'Jeeb: Unknown state received. Please report this incident.');
+                        break;
                 }
+
                 header("HTTP/1.1 200 OK");
             }
             header("HTTP/1.0 404 Not Found");
         }
 
-        private function convert_base_to_bitcoin($base_currency, $amount)
-        {
-            $ch = curl_init(self::BASE_URL . 'currency?value=' . $amount . '&base=' . $base_currency . '&target=btc');
-            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "GET");
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                'Content-Type: application/json',
-                'User-Agent:' . self::PLUGIN_NAME . '/' . self::PLUGIN_VERSION)
-            );
-            $result = curl_exec($ch);
-            $data = json_decode($result, true);
-            // Return the equivalent bitcoin value acquired from Jeeb server.
-            return (float) $data["result"];
-        }
-
-        private function create_payment($signature, $options = array())
+        private function create_payment($api_key, $options = array())
         {
             $post = json_encode($options);
-            $ch = curl_init(self::BASE_URL . 'payments/' . $signature . '/issue/');
+            $ch = curl_init(self::BASE_URL . 'payments/issue/');
             curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
             curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HTTPHEADER, array(
                 'Content-Type:application/json',
+                'X-API-Key: ' . $api_key,
                 'User-Agent:' . self::PLUGIN_NAME . '/' . self::PLUGIN_VERSION,
             ));
             $result = curl_exec($ch);
@@ -558,26 +561,64 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
             return $data['result']['token'];
         }
 
-        private function confirm_payment($signature, $options = array())
+        private function confirm_payment($token, $api_key)
         {
-            $post = json_encode($options);
-            $ch = curl_init(self::BASE_URL . 'payments/' . $signature . '/confirm/');
+            $post = json_encode(array('token' => $token));
+
+            $ch = curl_init(self::BASE_URL . 'payments/seal/');
             curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
             curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HTTPHEADER, array(
                 'Content-Type:application/json',
+                'X-API-Key: ' . $api_key,
                 'User-Agent:' . self::PLUGIN_NAME . '/' . self::PLUGIN_VERSION,
             ));
             $result = curl_exec($ch);
             $data = json_decode($result, true);
-            return (bool) $data['result']['isConfirmed'];
+            return (bool) $data['succeed'];
         }
 
         private function redirect_payment($token)
         {
             $redirect_url = self::BASE_URL . "payments/invoice?token=" . $token;
             header('Location: ' . $redirect_url);
+        }
+
+        /**
+         * Check if hashKey parameter in webhook request is valid
+         *
+         * @since       3.4.0
+         * @access      private
+         * @return      bool
+         */
+        private function validate_hashkey($hash_key, $api_key, $payment_id) {
+            return md5($api_key . $payment_id) === $hash_key;
+        }
+
+
+        /**
+         * Push message to webhook.site endpoint
+         *
+         * @since       3.4.0
+         * @access      private
+         * @param       $message
+         * @return      void
+         */
+        private function notify_log($message) {
+            global $edd_options;
+
+            if (isset($edd_options['edd_jeeb_webhookDebugUrl'])) {
+                $post = json_encode($message);
+                $ch = curl_init($edd_options['edd_jeeb_webhookDebugUrl']);
+                curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+                    'Content-Type: application/json',
+                ));
+
+                curl_exec($ch);
+            }
         }
     }
 }
