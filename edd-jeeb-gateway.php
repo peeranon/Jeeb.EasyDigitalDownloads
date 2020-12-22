@@ -1,9 +1,10 @@
 <?php
+
 /**
  * Plugin Name:     Easy Digital Downloads - Jeeb Payment Gateway
  * Plugin URI:      https://github.com/Jeebio/Jeeb.EasyDigitalDownloads
  * Description:     The first Iranian platform for accepting and processing cryptocurrencies payments.
- * Version:         3.3
+ * Version:         4.0
  * Author:          Jeeb
  * Author URI:      https://jeeb.io
  */
@@ -51,7 +52,7 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
     {
 
         const PLUGIN_NAME = 'easydigitaldownloads';
-        const PLUGIN_VERSION = '3.4';
+        const PLUGIN_VERSION = '4.0';
         const BASE_URL = "https://core.jeeb.io/api/v3/";
 
         private static $instance;
@@ -120,7 +121,6 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
             add_action('init', array($this, 'edd_listen_for_jeeb_ipn'));
             add_action('edd_verify_jeeb_ipn', array($this, 'process_webhook'));
             add_action('edd_process_jeeb_payment', array($this, 'process_jeeb_payment'), 10, 2);
-
         }
 
         public function jeeb_checkout_edd_register_gateway_section($gateway_sections)
@@ -243,7 +243,7 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
             foreach ($available_coins as $key => $title) {
                 $jeeb_edd_settings[] = array(
                     'id' => 'edd_jeeb_' . $key,
-                    'name' => $first_item ? 'Payable Currencies':'',
+                    'name' => $first_item ? 'Payable Currencies' : '',
                     'desc' => $title,
                     'type' => 'checkbox',
                     'default' => 'yes',
@@ -408,7 +408,7 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
             $hash_key = md5($api_key . $payment_id);
             $webhook_url = trailingslashit(home_url()) . '?edd-listener=JEEBIPN&hashKey=' . $hash_key;
 
-            $callback_url = get_permalink( edd_get_option( 'success_page', false ) );
+            $callback_url = get_permalink(edd_get_option('success_page', false));
             if (isset($edd_options['edd_jeeb_callback_url'])) {
                 $callback_url =  $edd_options['edd_jeeb_callback_url'];
             }
@@ -416,11 +416,14 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
             $order_total = round($purchase_data['price'] - $purchase_data['tax'], 8);
             $base_currency = $edd_options['edd_jeeb_baseCurrency'];
 
-            if (isset($edd_options['edd_jeeb_expiration']) === false ||
-                is_numeric($edd_options['edd_jeeb_expiration']) === false ||
-                $edd_options['edd_jeeb_expiration'] < 15 ||
-                $edd_options['edd_jeeb_expiration'] > 2880) {
-                $edd_options['edd_jeeb_expiration'] = 15;
+            $expiration = 15;
+            if (
+                isset($edd_options['edd_jeeb_expiration'])  &&
+                is_numeric($edd_options['edd_jeeb_expiration']) &&
+                $edd_options['edd_jeeb_expiration'] >= 15 ||
+                $edd_options['edd_jeeb_expiration'] <= 2880
+            ) {
+                $expiration = $edd_options['edd_jeeb_expiration'];
             }
 
             $coins = array_keys($this->jeeb_available_coins_list());
@@ -436,6 +439,9 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
                 $payable_coins = null;
             }
 
+            $allowReject = isset($edd_options['edd_jeeb_allow_refund']) &&  $edd_options['edd_jeeb_allow_refund'] == '1';
+            $allowTestNets = isset($edd_options['edd_jeeb_testnets']) &&  $edd_options['edd_jeeb_testnets'] == '1';
+
             $data = array(
                 "orderNo" => $payment_id,
                 "baseAmount" => $order_total,
@@ -443,9 +449,9 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
                 "payableCoins" => $payable_coins,
                 "webhookUrl" => $webhook_url,
                 "callbackUrl" => $callback_url,
-                "expiration" => $edd_options['edd_jeeb_expiration'],
-                "allowReject" => $edd_options['edd_jeeb_allow_refund'] == '1' ? true : false,
-                "allowTestNets" => $edd_options['edd_jeeb_testnets'] == '1' ? true : false,
+                "expiration" => $expiration,
+                "allowReject" => $allowReject,
+                "allowTestNets" => $allowTestNets,
                 "language" => $edd_options['edd_jeeb_lang'] == 'none' ? null : $edd_options['edd_jeeb_lang'],
             );
 
@@ -492,8 +498,8 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
 
             $api_key = $edd_options['edd_jeeb_apiKey'];
 
-            if ( $this->validate_hashkey($_GET['hashKey'], $api_key, $payment_id) ) {
-                
+            if ($this->validate_hashkey($_GET['hashKey'], $api_key, $payment_id)) {
+
                 $this->notify_log('HashKey:' . $_GET['hashKey'] . ' is valid');
 
                 switch ($json['state']) {
@@ -510,7 +516,7 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
                         edd_update_payment_status($payment_id, 'pending');
                         edd_set_payment_transaction_id($payment_id, $json['referenceNo']);
                         break;
-                    
+
                     case 'Completed':
                         $is_confirmed = $this->confirm_payment($json['token'], $api_key);
 
@@ -521,7 +527,7 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
                             edd_insert_payment_note($payment_id, 'Jeeb: Double spending avoided.');
                         }
                         break;
-                    
+
                     case 'Rejected':
                         edd_insert_payment_note($payment_id, 'Jeeb: Payment is rejected.');
                         edd_update_payment_status($payment_id, 'refunded');
@@ -582,7 +588,7 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
         private function redirect_payment($token)
         {
             $redirect_url = self::BASE_URL . "payments/invoice?token=" . $token;
-            header('Location: ' . $redirect_url);
+            echo "<script type='text/javascript'>document.location.href='{$redirect_url}';</script>";
         }
 
         /**
@@ -592,7 +598,8 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
          * @access      private
          * @return      bool
          */
-        private function validate_hashkey($hash_key, $api_key, $payment_id) {
+        private function validate_hashkey($hash_key, $api_key, $payment_id)
+        {
             return md5($api_key . $payment_id) === $hash_key;
         }
 
@@ -605,7 +612,8 @@ if (!class_exists('EDD_Jeeb_Payment_Gateway')) {
          * @param       $message
          * @return      void
          */
-        private function notify_log($message) {
+        private function notify_log($message)
+        {
             global $edd_options;
 
             if (isset($edd_options['edd_jeeb_webhookDebugUrl'])) {
